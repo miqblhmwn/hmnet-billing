@@ -1162,7 +1162,19 @@ class HMNetStore {
   }
 
   login(username, password) {
-    const u = this.getUserByUsername(username);
+    let u = this.getUserByUsername(username);
+    if (!u) {
+      // Fallback: Cek jika akun default sistem digunakan (owner, admin, teknisi)
+      const def = DEFAULT_USERS.find(du => du.username.toLowerCase() === String(username).toLowerCase().trim());
+      if (def) {
+        if (!Array.isArray(this.users)) this.users = [];
+        const nextId = this.users.length > 0 ? Math.max(...this.users.map(x => x.id || 0)) + 1 : def.id;
+        const restoredUser = { ...JSON.parse(JSON.stringify(def)), id: nextId };
+        this.users.push(restoredUser);
+        this.saveUsers();
+        u = restoredUser;
+      }
+    }
     if (!u) {
       this.addAuditLog({
         category: "AUTH",
