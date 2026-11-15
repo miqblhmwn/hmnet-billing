@@ -3910,6 +3910,9 @@
       document.getElementById(id).classList.remove('hidden');
     }
     function closeModal(id) {
+      if (id === 'modal-login' && !store.getCurrentUser()) {
+        return; // Wajib login, tidak boleh ditutup tanpa akun sah
+      }
       document.getElementById(id).classList.add('hidden');
     }
 
@@ -7090,13 +7093,11 @@
     // ==========================================
 
     function initAuth() {
-      let currentUser = store.getCurrentUser();
+      const currentUser = store.getCurrentUser();
       if (!currentUser) {
-        // Default awal jika baru pertama kali: login sebagai Owner agar langsung aktif
-        currentUser = store.getUser(1) || store.getUsers()[0];
-        if (currentUser) {
-          store.setCurrentUser(currentUser);
-        }
+        // Belum ada sesi login aktif -> Wajib tampilkan modal login!
+        openLoginModal();
+        return;
       }
       applyRolePermissions();
     }
@@ -7106,6 +7107,10 @@
       const errAlert = document.getElementById('login-error-alert');
       if (errAlert) errAlert.classList.add('hidden');
       if (modal) modal.classList.remove('hidden');
+      const uInput = document.getElementById('login-input-username');
+      const pInput = document.getElementById('login-input-password');
+      if (uInput) uInput.value = '';
+      if (pInput) pInput.value = '';
     }
 
     function closeLoginModal() {
@@ -7210,6 +7215,7 @@
         openLoginModal();
         return;
       }
+      closeLoginModal();
 
       const roleCfg = getRoleBadgeConfig(user.role);
       const perms = user.permissions || store.getDefaultPermissionsForRole(user.role);
