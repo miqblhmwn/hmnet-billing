@@ -168,15 +168,12 @@
           <span>Masuk ke Dashboard</span>
         </button>
 
-        <!-- Akun Bawaan / Info Bantuan -->
-        <div class="pt-3 border-t border-slate-100 space-y-1.5 text-center">
-          <p class="text-[11px] text-slate-500 font-medium">Akun Sistem Bawaan:</p>
-          <div class="flex items-center justify-center gap-1.5 flex-wrap text-[10px] font-mono">
-            <span class="bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-semibold">owner / owner123</span>
-            <span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-semibold">admin / admin123</span>
-            <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-semibold">teknisi / teknisi123</span>
-          </div>
-          <p class="text-[10px] text-slate-400 mt-2">Hak akses dan tampilan sistem akan disesuaikan otomatis setelah Anda masuk.</p>
+        <!-- Footer Info Keamanan -->
+        <div class="pt-3 border-t border-slate-100 text-center">
+          <p class="text-[11px] text-slate-400 font-medium flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-shield-halved text-emerald-600 text-xs"></i>
+            <span>Portal Terenkripsi &bull; Cloud Realtime Sync Aktif</span>
+          </p>
         </div>
 
       </form>
@@ -7198,11 +7195,16 @@
       }
     }
 
-    function handleLoginFormSubmit(e) {
+    async function handleLoginFormSubmit(e) {
       e.preventDefault();
       const username = document.getElementById('login-input-username').value.trim();
       const password = document.getElementById('login-input-password').value;
       
+      // Jika akun tidak ditemukan secara lokal, coba sinkronisasi ke cloud dulu
+      if (window.cloudSync && !store.getUserByUsername(username)) {
+        await window.cloudSync.pullLatestFromCloud();
+      }
+
       const res = store.login(username, password);
       if (res.success) {
         closeLoginModal();

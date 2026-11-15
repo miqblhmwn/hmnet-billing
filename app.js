@@ -147,9 +147,9 @@ const INITIAL_EXPENSES = [
 const DEFAULT_USERS = [
   {
     id: 1,
-    username: "owner",
-    password: "owner123",
-    name: "Pak Owner (HM Net)",
+    username: "himanet",
+    password: "060602",
+    name: "Bos Hima (HM Net)",
     role: "Owner",
     permissions: {
       dashboard: true,
@@ -164,9 +164,9 @@ const DEFAULT_USERS = [
   },
   {
     id: 2,
-    username: "admin",
-    password: "admin123",
-    name: "Mbak Admin Billing",
+    username: "izza",
+    password: "izzasayangg",
+    name: "Bu Bos (HM Net)",
     role: "Admin",
     permissions: {
       dashboard: false,
@@ -174,23 +174,6 @@ const DEFAULT_USERS = [
       customers: false,
       remoteNetwork: false,
       receiptStudio: true,
-      userManagement: false,
-      personalFinance: false,
-      settings: false
-    }
-  },
-  {
-    id: 3,
-    username: "teknisi",
-    password: "teknisi123",
-    name: "Mas Teknisi Lapangan",
-    role: "Teknisi",
-    permissions: {
-      dashboard: false,
-      billing: false,
-      customers: true,
-      remoteNetwork: true,
-      receiptStudio: false,
       userManagement: false,
       personalFinance: false,
       settings: false
@@ -487,7 +470,6 @@ class HMNetStore {
       console.warn("Error loading users, using defaults:", e);
     }
     this.users = JSON.parse(JSON.stringify(DEFAULT_USERS));
-    this.saveUsers();
   }
 
   saveUsers() {
@@ -1162,19 +1144,7 @@ class HMNetStore {
   }
 
   login(username, password) {
-    let u = this.getUserByUsername(username);
-    if (!u) {
-      // Fallback: Cek jika akun default sistem digunakan (owner, admin, teknisi)
-      const def = DEFAULT_USERS.find(du => du.username.toLowerCase() === String(username).toLowerCase().trim());
-      if (def) {
-        if (!Array.isArray(this.users)) this.users = [];
-        const nextId = this.users.length > 0 ? Math.max(...this.users.map(x => x.id || 0)) + 1 : def.id;
-        const restoredUser = { ...JSON.parse(JSON.stringify(def)), id: nextId };
-        this.users.push(restoredUser);
-        this.saveUsers();
-        u = restoredUser;
-      }
-    }
+    const u = this.getUserByUsername(username);
     if (!u) {
       this.addAuditLog({
         category: "AUTH",
@@ -1617,11 +1587,33 @@ class CloudSyncManager {
     if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
       try {
         this.supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key, {
-          auth: { persistSession: false }
+          auth: { persistSession: false },
+          realtime: {
+            params: {
+              eventsPerSecond: 10
+            }
+          }
         });
         this.updateSyncUI("connecting", "Menghubungkan ke Cloud...");
         this.subscribeRealtime();
         this.pullLatestFromCloud();
+
+        // Auto-pull whenever user focuses the tab/window
+        window.addEventListener('focus', () => {
+          this.pullLatestFromCloud();
+        });
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            this.pullLatestFromCloud();
+          }
+        });
+
+        // Background heartbeat pull every 5 seconds to guarantee 100% sync
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = setInterval(() => {
+          this.pullLatestFromCloud();
+        }, 5000);
+
       } catch (err) {
         console.warn("Supabase init error:", err);
         this.updateSyncUI("offline", "Cloud Offline (Mode Lokal)");
@@ -1635,7 +1627,6 @@ class CloudSyncManager {
     if (!this.supabase) return;
     try {
       this.isSyncing = true;
-      this.updateSyncUI("syncing", "Menyinkronkan...");
       const { data, error } = await this.supabase
         .from('hmnet_sync')
         .select('*')
@@ -1675,14 +1666,30 @@ class CloudSyncManager {
     if (!this.supabase) return;
     try {
       this.channel = this.supabase
-        .channel('public:hmnet_sync')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'hmnet_sync' }, (payload) => {
-          console.info("Realtime event received from Supabase:", payload);
-          if (payload.new && payload.new.payload) {
-            // Ignore echo if we were the one who pushed it
-            if (payload.new.updated_by === this.clientId) {
-              return;
+        .channel('hmnet_global_sync', {
+          config: {
+            broadcast: { self: false }
+          }
+        })
+        .on('broadcast', { event: 'store_update' }, (evt) => {
+          console.info("⚡ Supabase Broadcast received:", evt);
+          if (evt && evt.payload && evt.payload.payload) {
+            if (evt.payload.updated_by === this.clientId) return;
+            const changed = this.store.applyRemotePayload(evt.payload.payload);
+            this.lastSyncTime = new Date();
+            this.updateSyncUI("connected", "Cloud Sync: Realtime");
+            if (changed && typeof window.refreshAllViews === 'function') {
+              window.refreshAllViews();
             }
+            if (typeof showToast === 'function') {
+              showToast("Data disinkronkan otomatis dari Cloud!", "info");
+            }
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'hmnet_sync' }, (payload) => {
+          console.info("⚡ Postgres changes received:", payload);
+          if (payload.new && payload.new.payload) {
+            if (payload.new.updated_by === this.clientId) return;
             const changed = this.store.applyRemotePayload(payload.new.payload);
             this.lastSyncTime = new Date();
             this.updateSyncUI("connected", "Cloud Sync: Realtime");
@@ -1712,7 +1719,7 @@ class CloudSyncManager {
     }
     this.syncDebounceTimer = setTimeout(() => {
       this.pushToCloud();
-    }, 400); // 400ms debounce
+    }, 300); // 300ms debounce
   }
 
   async pushToCloud(isInitialSeed = false) {
@@ -1729,7 +1736,6 @@ class CloudSyncManager {
         updatedAt: new Date().toISOString()
       };
 
-      const user = this.store.getCurrentUser();
       const row = {
         id: 'primary_store',
         payload: payload,
@@ -1738,6 +1744,20 @@ class CloudSyncManager {
         updated_by: this.clientId
       };
 
+      // 1. Kirim instant WebSocket Broadcast ke seluruh browser/device (Vercel & Local)
+      if (this.channel) {
+        this.channel.send({
+          type: 'broadcast',
+          event: 'store_update',
+          payload: {
+            payload: payload,
+            updated_by: this.clientId,
+            updated_at: row.updated_at
+          }
+        }).catch(e => console.warn("Broadcast send warn:", e));
+      }
+
+      // 2. Simpan permanen ke tabel database Supabase hmnet_sync
       const { data, error } = await this.supabase
         .from('hmnet_sync')
         .upsert(row);
@@ -1794,3 +1814,6 @@ class CloudSyncManager {
 // Global instance
 window.store = new HMNetStore();
 window.cloudSync = new CloudSyncManager(window.store);
+if (typeof window !== 'undefined') {
+  window.cloudSync.init();
+}
