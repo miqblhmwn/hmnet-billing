@@ -1501,10 +1501,15 @@
             <i class="fa-solid fa-calendar-plus text-purple-600"></i>
             <span class="hidden md:inline">+ Bulan</span>
           </button>
+
+          <button onclick="openModalManageFinanceTemplate()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 font-bold text-xs py-2 px-3 rounded-xl transition flex items-center gap-1.5 shadow-2xs active:scale-95" title="Menu Edit Template Pemasukan & Pengeluaran Setiap Bulan">
+            <i class="fa-solid fa-sliders text-indigo-600"></i>
+            <span>Edit Template Bulanan</span>
+          </button>
           
           <button onclick="applyDefaultTemplateCurrentMonth()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs py-2 px-3 rounded-xl transition flex items-center gap-1.5 shadow-2xs active:scale-95" title="Terapkan / Update Rincian Pertanggal 26 Sesuai Template">
             <i class="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
-            <span class="hidden md:inline">Template Tgl 26</span>
+            <span class="hidden md:inline">Terapkan Tgl 26</span>
           </button>
 
           <button onclick="openModalAddFinanceItem()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl transition flex items-center gap-1.5 shadow-sm active:scale-95">
@@ -1531,8 +1536,8 @@
                 <span class="bg-emerald-100 text-emerald-800 text-[9.5px] font-black px-2 py-0.5 rounded-full">Realtime Connected</span>
               </h4>
               <p class="text-[11px] text-slate-600 mt-0.5">
-                &bull; <strong>HM NET Gribig:</strong> Mengambil uang lunas riil dari sistem billing pelanggan (Terkumpul: <strong class="text-emerald-700" id="fin-info-gribig-paid">Rp 2.745.000</strong>) | Sisa Piutang Nunggak: <strong class="text-rose-600" id="fin-info-gribig-unpaid">Rp 2.250.000</strong> (<span id="fin-info-gribig-count">23</span> pelanggan).<br>
-                &bull; <strong>Makan (Pribadi):</strong> Mengambil total pengeluaran dari sheet catatan uang makan harian (<strong class="text-amber-700" id="fin-info-food-total">Rp 340.000</strong>).
+                &bull; <strong>HM NET Gribig:</strong> Sinkron otomatis jumlah piutang belum bayar dari sistem billing (Sisa Piutang: <strong class="text-rose-600 font-bold" id="fin-info-gribig-unpaid">Rp 2.050.000</strong> (<span id="fin-info-gribig-count">21</span> pelanggan) | Terkumpul Lunas: <strong class="text-emerald-700 font-bold" id="fin-info-gribig-paid">Rp 2.945.000</strong>).<br>
+                &bull; <strong>Makan (Pribadi):</strong> Mengambil total pengeluaran dari sheet catatan uang makan harian (<strong class="text-amber-700" id="fin-info-food-total">Rp 260.000</strong>).
               </p>
             </div>
           </div>
@@ -2107,6 +2112,8 @@
           </select>
         </div>
 
+        <div id="fin-item-sync-hint" class="hidden text-[11px] bg-amber-50 text-amber-900 border border-amber-200 p-2.5 rounded-xl leading-relaxed"></div>
+
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Nama Sumber / Item <span class="text-rose-500">*</span></label>
           <input type="text" id="fin-input-name" required placeholder="Contoh: Honor Tambahan / Kas" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none">
@@ -2131,6 +2138,130 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: KELOLA TEMPLATE KEUANGAN BULANAN (TGL 26)         -->
+  <!-- ======================================================== -->
+  <div id="modal-finance-template" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-300">
+            <i class="fa-solid fa-sliders text-base"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm sm:text-base">Kelola Template Pemasukan & Pengeluaran Bulanan</h3>
+            <p class="text-[11px] text-purple-200/80">Atur pos standar per tanggal 26 yang akan otomatis disiapkan untuk setiap bulan baru.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-finance-template')" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Tab Buttons for 4 Quadrants -->
+      <div class="bg-slate-100 p-2 border-b border-slate-200 flex items-center gap-1 overflow-x-auto shrink-0">
+        <button type="button" onclick="switchFinanceTemplateTab('personalIncome')" id="btn-fin-tmpl-personalIncome" class="fin-tmpl-tab-btn flex-1 min-w-[130px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-white text-purple-900 shadow-xs border border-purple-200">
+          <i class="fa-solid fa-wallet text-emerald-600"></i>
+          <span>Pemasukan Pribadi</span>
+        </button>
+        <button type="button" onclick="switchFinanceTemplateTab('businessIncome')" id="btn-fin-tmpl-businessIncome" class="fin-tmpl-tab-btn flex-1 min-w-[130px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-building text-emerald-600"></i>
+          <span>Pemasukan Bisnis</span>
+        </button>
+        <button type="button" onclick="switchFinanceTemplateTab('personalExpense')" id="btn-fin-tmpl-personalExpense" class="fin-tmpl-tab-btn flex-1 min-w-[130px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-cart-shopping text-rose-500"></i>
+          <span>Pengeluaran Pribadi</span>
+        </button>
+        <button type="button" onclick="switchFinanceTemplateTab('businessExpense')" id="btn-fin-tmpl-businessExpense" class="fin-tmpl-tab-btn flex-1 min-w-[130px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-network-wired text-rose-500"></i>
+          <span>Pengeluaran Bisnis</span>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 overflow-y-auto space-y-4 flex-1">
+        <!-- Sub-form Tambah / Edit Item Template -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+          <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span id="fin-tmpl-form-title"><i class="fa-solid fa-plus-circle text-purple-600"></i> Tambah Pos ke Template</span>
+            <button type="button" onclick="cancelFinanceTemplateEdit()" id="btn-fin-tmpl-cancel-edit" class="hidden text-[11px] text-slate-500 hover:text-rose-600 underline font-semibold">Batal Edit</button>
+          </h4>
+          <input type="hidden" id="fin-tmpl-input-index" value="-1">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Nama Pos / Sumber <span class="text-rose-500">*</span></label>
+              <input type="text" id="fin-tmpl-input-name" placeholder="Contoh: Mandiri / Indihome" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Nominal Bawaan (Rp)</label>
+              <input type="number" id="fin-tmpl-input-amount" placeholder="0" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-purple-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Catatan Bawaan (Opsional)</label>
+              <input type="text" id="fin-tmpl-input-note" placeholder="Keterangan singkat" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <!-- Sync Checkbox -->
+            <div id="fin-tmpl-sync-options" class="flex items-center gap-2">
+              <label id="lbl-fin-tmpl-sync-billing" class="hidden items-center gap-1.5 text-xs text-slate-700 cursor-pointer select-none">
+                <input type="checkbox" id="chk-fin-tmpl-sync-billing" class="rounded text-purple-600 focus:ring-purple-500">
+                <span class="font-bold text-emerald-700"><i class="fa-solid fa-bolt"></i> Sinkron Otomatis Piutang Billing</span>
+              </label>
+              <label id="lbl-fin-tmpl-sync-food" class="hidden items-center gap-1.5 text-xs text-slate-700 cursor-pointer select-none">
+                <input type="checkbox" id="chk-fin-tmpl-sync-food" class="rounded text-purple-600 focus:ring-purple-500">
+                <span class="font-bold text-amber-700"><i class="fa-solid fa-utensils"></i> Sinkron Otomatis Sheet Kalender Makan</span>
+              </label>
+            </div>
+            <button type="button" onclick="submitFinanceTemplateItem()" id="btn-fin-tmpl-submit-item" class="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition shadow-xs flex items-center justify-center gap-1.5 self-end">
+              <i class="fa-solid fa-check"></i>
+              <span id="btn-fin-tmpl-submit-text">Tambahkan ke Template</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Pos Template -->
+        <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+              <tr>
+                <th class="py-2.5 px-3 text-center w-10">No</th>
+                <th class="py-2.5 px-3">Nama Pos / Sumber</th>
+                <th class="py-2.5 px-3 text-right">Nominal Bawaan</th>
+                <th class="py-2.5 px-3">Keterangan / Status</th>
+                <th class="py-2.5 px-3 text-center w-24">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="fin-tmpl-table-body" class="divide-y divide-slate-100">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="resetFinanceTemplateDefaults()" class="text-xs text-rose-600 hover:text-rose-800 font-bold hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-arrow-rotate-left"></i>
+            <span>Kembalikan ke Template Default Pabrik</span>
+          </button>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button type="button" onclick="applyTemplateToCurrentPeriodDirect()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5" title="Terapkan template ke periode yang sedang dibuka saat ini">
+            <i class="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
+            <span>Terapkan ke Bulan Ini</span>
+          </button>
+          <button type="button" onclick="saveFinanceTemplateModal()" class="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs px-5 py-2 rounded-xl transition shadow-md shadow-purple-600/25 flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Simpan Template</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -7837,25 +7968,28 @@
       let totalBIncome = 0;
       if (tBusinessIncome) {
         tBusinessIncome.innerHTML = (real.businessIncome || []).map((item, idx) => {
-          const isGribig = item.name.toLowerCase().includes('gribig');
-          const amt = (isGribig && item.syncWithBilling) ? fin.totalPaid : (Number(item.amount) || 0);
+          const isBillingSync = item.syncWithBilling === true || (item.name && item.name.toLowerCase().includes('gribig'));
+          // REVISI USER: Nilai di baris ini adalah JUMLAH PIUTANG / NOMINAL PELANGGAN BELUM BAYAR (fin.totalUnpaid)
+          const amt = (isBillingSync && item.syncWithBilling !== false) ? fin.totalUnpaid : (Number(item.amount) || 0);
           totalBIncome += amt;
 
           return `
-            <tr class="hover:bg-slate-50/80 transition ${isGribig ? 'bg-emerald-50/30' : ''}">
+            <tr class="hover:bg-slate-50/80 transition ${isBillingSync && item.syncWithBilling !== false ? 'bg-amber-50/30' : ''}">
               <td class="py-2.5 px-3 text-center text-slate-400 font-bold">${idx + 1}</td>
               <td class="py-2.5 px-3 font-bold text-slate-800">
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <span>${item.name}</span>
-                  ${isGribig ? `
-                    <span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[9px] font-black px-1.5 py-0.2 rounded" title="Nilai ini sinkron otomatis dengan uang lunas di billing">
-                      <i class="fa-solid fa-bolt text-[8px]"></i> Sinkron Billing
+                  ${isBillingSync && item.syncWithBilling !== false ? `
+                    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-900 text-[9px] font-black px-1.5 py-0.5 rounded" title="Nilai ini sinkron otomatis dengan total piutang pelanggan belum bayar di dashboard">
+                      <i class="fa-solid fa-bolt text-[8px] text-amber-600"></i> Sinkron Piutang Billing
                     </span>
                   ` : ''}
                 </div>
-                ${isGribig ? `
-                  <div class="text-[10px] text-slate-500 font-normal mt-0.5">
-                    Piutang Pelanggan: <strong class="text-rose-600 font-bold">${formatRupiah(fin.totalUnpaid)}</strong> (${fin.unpaidCount} blm lunas)
+                ${isBillingSync && item.syncWithBilling !== false ? `
+                  <div class="text-[10px] text-slate-500 font-normal mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span class="text-rose-600 font-bold"><i class="fa-solid fa-clock"></i> Belum Lunas: ${fin.unpaidCount} pelanggan</span>
+                    <span class="text-slate-300">•</span>
+                    <span class="text-emerald-700 font-semibold">Terkumpul Lunas: ${formatRupiah(fin.totalPaid)} (${fin.paidCount} lunas)</span>
                   </div>
                 ` : (item.note ? `<span class="block text-[10px] text-slate-400 font-normal">${item.note}</span>` : '')}
               </td>
@@ -7865,15 +7999,14 @@
                   <button onclick="openModalEditFinanceItem('businessIncome', ${item.id})" class="text-slate-400 hover:text-purple-600 p-1" title="Edit Pos">
                     <i class="fa-solid fa-pen-to-square text-[11px]"></i>
                   </button>
-                  ${!isGribig ? `
-                    <button onclick="deleteFinanceRealisationItem('businessIncome', ${item.id})" class="text-slate-400 hover:text-rose-600 p-1" title="Hapus">
-                      <i class="fa-solid fa-trash-can text-[11px]"></i>
-                    </button>
-                  ` : `
+                  <button onclick="deleteFinanceRealisationItem('businessIncome', ${item.id})" class="text-slate-400 hover:text-rose-600 p-1" title="Hapus">
+                    <i class="fa-solid fa-trash-can text-[11px]"></i>
+                  </button>
+                  ${isBillingSync && item.syncWithBilling !== false ? `
                     <button onclick="syncFinanceWithBilling(true)" class="text-emerald-600 hover:text-emerald-800 p-1" title="Refresh dari Billing">
                       <i class="fa-solid fa-rotate text-[11px]"></i>
                     </button>
-                  `}
+                  ` : ''}
                 </div>
               </td>
             </tr>
@@ -8233,9 +8366,13 @@
       document.getElementById('fin-input-id').value = '';
       document.getElementById('fin-input-name').value = '';
       document.getElementById('fin-input-amount').value = '';
+      document.getElementById('fin-input-amount').disabled = false;
+      document.getElementById('fin-input-amount').classList.remove('bg-slate-100', 'text-slate-500');
       document.getElementById('fin-input-note').value = '';
       document.getElementById('fin-select-section').value = preferredSection;
       document.getElementById('fin-select-section').disabled = false;
+      const hintEl = document.getElementById('fin-item-sync-hint');
+      if (hintEl) hintEl.classList.add('hidden');
       document.getElementById('modal-fin-item-title').innerText = 'Tambah Pos Keuangan';
       openModal('modal-finance-item');
     }
@@ -8250,6 +8387,24 @@
       document.getElementById('fin-input-name').value = item.name;
       document.getElementById('fin-input-amount').value = item.amount;
       document.getElementById('fin-input-note').value = item.note || '';
+
+      const isSynced = (item.syncWithBilling || item.syncWithFoodSheet);
+      const hintEl = document.getElementById('fin-item-sync-hint');
+      if (hintEl) {
+        if (isSynced) {
+          hintEl.classList.remove('hidden');
+          hintEl.innerHTML = item.syncWithBilling
+            ? '<i class="fa-solid fa-bolt text-amber-500"></i> <strong>Pos Sinkron Billing:</strong> Nominal dihitung otomatis dari total piutang belum bayar di billing. Anda dapat mengubah nama pos & catatan kapan saja.'
+            : '<i class="fa-solid fa-utensils text-amber-500"></i> <strong>Pos Sinkron Sheet Makan:</strong> Nominal dihitung otomatis dari akumulasi tanggal 26-25.';
+          document.getElementById('fin-input-amount').disabled = true;
+          document.getElementById('fin-input-amount').classList.add('bg-slate-100', 'text-slate-500');
+        } else {
+          hintEl.classList.add('hidden');
+          document.getElementById('fin-input-amount').disabled = false;
+          document.getElementById('fin-input-amount').classList.remove('bg-slate-100', 'text-slate-500');
+        }
+      }
+
       document.getElementById('modal-fin-item-title').innerText = `Edit Pos: ${item.name}`;
       openModal('modal-finance-item');
     }
@@ -8278,6 +8433,213 @@
         store.deleteRealisationItem(currentFinancePeriod, sectionKey, id);
         renderFinanceRealisation();
         showToast('Pos keuangan telah dihapus.', 'info');
+      }
+    }
+
+    // ========================================================
+    // KELOLA TEMPLATE KEUANGAN BULANAN (TGL 26)
+    // ========================================================
+    let currentFinanceTemplateTab = 'personalIncome';
+    let editingTemplateData = null;
+
+    function openModalManageFinanceTemplate() {
+      const storeTemplate = store.getMonthlyTemplate();
+      editingTemplateData = JSON.parse(JSON.stringify(storeTemplate));
+      switchFinanceTemplateTab(currentFinanceTemplateTab || 'personalIncome');
+      openModal('modal-finance-template');
+    }
+
+    function switchFinanceTemplateTab(tabKey) {
+      currentFinanceTemplateTab = tabKey;
+      ['personalIncome', 'businessIncome', 'personalExpense', 'businessExpense'].forEach(key => {
+        const btn = document.getElementById(`btn-fin-tmpl-${key}`);
+        if (btn) {
+          if (key === tabKey) {
+            btn.className = "fin-tmpl-tab-btn flex-1 min-w-[130px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-white text-purple-900 shadow-xs border border-purple-200";
+          } else {
+            btn.className = "fin-tmpl-tab-btn flex-1 min-w-[130px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900";
+          }
+        }
+      });
+
+      const lblBilling = document.getElementById('lbl-fin-tmpl-sync-billing');
+      const lblFood = document.getElementById('lbl-fin-tmpl-sync-food');
+      if (lblBilling) {
+        if (tabKey === 'businessIncome') lblBilling.classList.remove('hidden');
+        else lblBilling.classList.add('hidden');
+      }
+      if (lblFood) {
+        if (tabKey === 'personalExpense') lblFood.classList.remove('hidden');
+        else lblFood.classList.add('hidden');
+      }
+
+      cancelFinanceTemplateEdit();
+      renderFinanceTemplateTable();
+    }
+
+    function renderFinanceTemplateTable() {
+      if (!editingTemplateData) return;
+      const list = editingTemplateData[currentFinanceTemplateTab] || [];
+      const tbody = document.getElementById('fin-tmpl-table-body');
+      if (!tbody) return;
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">Belum ada pos di kategori ini. Silakan tambahkan pada form di atas.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map((item, idx) => {
+        const isBillingSync = item.syncWithBilling === true;
+        const isFoodSync = item.syncWithFoodSheet === true;
+        let badge = '';
+        if (isBillingSync) {
+          badge = '<span class="inline-flex items-center gap-1 bg-amber-100 text-amber-900 text-[9px] font-black px-1.5 py-0.5 rounded"><i class="fa-solid fa-bolt text-[8px] text-amber-600"></i> Sinkron Piutang Billing</span>';
+        } else if (isFoodSync) {
+          badge = '<span class="inline-flex items-center gap-1 bg-amber-100 text-amber-900 text-[9px] font-black px-1.5 py-0.5 rounded"><i class="fa-solid fa-utensils text-[8px] text-amber-600"></i> Sinkron Sheet Makan</span>';
+        }
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-2.5 px-3 text-center text-slate-400 font-bold">${idx + 1}</td>
+            <td class="py-2.5 px-3 font-bold text-slate-800">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span>${item.name}</span>
+                ${badge}
+              </div>
+            </td>
+            <td class="py-2.5 px-3 text-right font-black ${isBillingSync || isFoodSync ? 'text-slate-400' : 'text-slate-900'}">
+              ${isBillingSync ? '<span class="text-[10px] italic">Otomatis Piutang</span>' : (isFoodSync ? '<span class="text-[10px] italic">Otomatis Sheet</span>' : formatRupiah(item.amount))}
+            </td>
+            <td class="py-2.5 px-3 text-slate-500 text-[11px]">
+              ${item.note || '-'}
+            </td>
+            <td class="py-2.5 px-3 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button type="button" onclick="editFinanceTemplateItem(${idx})" class="p-1.5 text-purple-600 hover:text-purple-800 rounded-lg hover:bg-purple-50" title="Edit Pos Ini">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button type="button" onclick="deleteFinanceTemplateItem(${idx})" class="p-1.5 text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50" title="Hapus Pos Ini">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function editFinanceTemplateItem(index) {
+      if (!editingTemplateData) return;
+      const list = editingTemplateData[currentFinanceTemplateTab] || [];
+      const item = list[index];
+      if (!item) return;
+
+      document.getElementById('fin-tmpl-input-index').value = index;
+      document.getElementById('fin-tmpl-input-name').value = item.name || '';
+      document.getElementById('fin-tmpl-input-amount').value = item.amount || 0;
+      document.getElementById('fin-tmpl-input-note').value = item.note || '';
+
+      const chkBilling = document.getElementById('chk-fin-tmpl-sync-billing');
+      if (chkBilling) chkBilling.checked = !!item.syncWithBilling;
+      const chkFood = document.getElementById('chk-fin-tmpl-sync-food');
+      if (chkFood) chkFood.checked = !!item.syncWithFoodSheet;
+
+      document.getElementById('fin-tmpl-form-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-purple-600"></i> Edit Pos Template: <strong>${item.name}</strong>`;
+      document.getElementById('btn-fin-tmpl-submit-text').innerText = 'Perbarui Pos Template';
+      document.getElementById('btn-fin-tmpl-cancel-edit').classList.remove('hidden');
+    }
+
+    function cancelFinanceTemplateEdit() {
+      document.getElementById('fin-tmpl-input-index').value = "-1";
+      document.getElementById('fin-tmpl-input-name').value = "";
+      document.getElementById('fin-tmpl-input-amount').value = "";
+      document.getElementById('fin-tmpl-input-note').value = "";
+      const chkBilling = document.getElementById('chk-fin-tmpl-sync-billing');
+      if (chkBilling) chkBilling.checked = false;
+      const chkFood = document.getElementById('chk-fin-tmpl-sync-food');
+      if (chkFood) chkFood.checked = false;
+
+      document.getElementById('fin-tmpl-form-title').innerHTML = `<i class="fa-solid fa-plus-circle text-purple-600"></i> Tambah Pos ke Template`;
+      document.getElementById('btn-fin-tmpl-submit-text').innerText = 'Tambahkan ke Template';
+      document.getElementById('btn-fin-tmpl-cancel-edit').classList.add('hidden');
+    }
+
+    function submitFinanceTemplateItem() {
+      if (!editingTemplateData) return;
+      const name = document.getElementById('fin-tmpl-input-name').value.trim();
+      if (!name) {
+        showToast('Nama pos tidak boleh kosong!', 'warning');
+        return;
+      }
+      const amount = Number(document.getElementById('fin-tmpl-input-amount').value) || 0;
+      const note = document.getElementById('fin-tmpl-input-note').value.trim();
+      const idx = parseInt(document.getElementById('fin-tmpl-input-index').value, 10);
+
+      const isBillingSync = currentFinanceTemplateTab === 'businessIncome' && document.getElementById('chk-fin-tmpl-sync-billing')?.checked;
+      const isFoodSync = currentFinanceTemplateTab === 'personalExpense' && document.getElementById('chk-fin-tmpl-sync-food')?.checked;
+
+      const itemObj = {
+        name: name,
+        amount: amount,
+        note: note
+      };
+      if (isBillingSync) itemObj.syncWithBilling = true;
+      if (isFoodSync) itemObj.syncWithFoodSheet = true;
+
+      if (!editingTemplateData[currentFinanceTemplateTab]) {
+        editingTemplateData[currentFinanceTemplateTab] = [];
+      }
+      const list = editingTemplateData[currentFinanceTemplateTab];
+
+      if (idx >= 0 && idx < list.length) {
+        itemObj.id = list[idx].id || (idx + 1);
+        list[idx] = itemObj;
+        showToast(`Pos template "${name}" berhasil diupdate!`);
+      } else {
+        const nextId = list.length > 0 ? Math.max(...list.map(i => i.id || 0)) + 1 : 1;
+        itemObj.id = nextId;
+        list.push(itemObj);
+        showToast(`Pos "${name}" ditambahkan ke template!`);
+      }
+
+      cancelFinanceTemplateEdit();
+      renderFinanceTemplateTable();
+    }
+
+    function deleteFinanceTemplateItem(index) {
+      if (!editingTemplateData) return;
+      const list = editingTemplateData[currentFinanceTemplateTab] || [];
+      const item = list[index];
+      if (!item) return;
+
+      if (confirm(`Hapus pos template "${item.name}"? Pos ini tidak akan muncul di bulan-bulan baru mendatang.`)) {
+        list.splice(index, 1);
+        renderFinanceTemplateTable();
+        showToast(`Pos "${item.name}" dihapus dari template.`, 'info');
+      }
+    }
+
+    function saveFinanceTemplateModal() {
+      if (!editingTemplateData) return;
+      store.saveMonthlyTemplate(editingTemplateData);
+      closeModal('modal-finance-template');
+      showToast('Template bulanan berhasil disimpan & disinkronkan ke Cloud!', 'success');
+    }
+
+    function resetFinanceTemplateDefaults() {
+      if (confirm('Kembalikan template ke bawaan awal pabrik (Mandiri, Agrapana, Jetak, Gribig, Makan, dll)?')) {
+        editingTemplateData = JSON.parse(JSON.stringify(store.getDefaultMonthlyTemplate()));
+        renderFinanceTemplateTable();
+        showToast('Template direset ke default pabrik. Klik "Simpan Template" untuk menyimpan perubahan.', 'info');
+      }
+    }
+
+    function applyTemplateToCurrentPeriodDirect() {
+      if (confirm(`Apakah Anda yakin ingin menerapkan template ke periode saat ini (${currentFinancePeriod})? Rincian pos pada periode ini akan diperbarui sesuai template.`)) {
+        saveFinanceTemplateModal();
+        store.resetRealisationToTemplate(currentFinancePeriod);
+        renderFinanceRealisation();
+        showToast(`Template berhasil diterapkan ke periode ${currentFinancePeriod}!`, 'success');
       }
     }
 

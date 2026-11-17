@@ -1285,20 +1285,18 @@ class HMNetStore {
     return items;
   }
 
-  getRealisationTemplate(period = "November 2026") {
-    const { monthName } = this.parsePeriod(period);
+  getDefaultMonthlyTemplate() {
     return {
-      period: period,
       personalIncome: [
         { id: 1, name: "Mandiri", amount: 2030000, note: "Gaji / Rekening Utama" },
-        { id: 2, name: `Agrapana ${monthName}`, amount: 400000, note: "Pemasukan Sampingan" },
+        { id: 2, name: "Agrapana", amount: 400000, note: "Pemasukan Sampingan" },
         { id: 3, name: "Bensin", amount: 75000, note: "Reimburse / Subsidi Bensin" },
         { id: 4, name: "Cash", amount: 87000, note: "Uang Tunai Dompet" },
         { id: 5, name: "HM NET Gribig", amount: 220000, note: "Tarik profit untuk pribadi" }
       ],
       businessIncome: [
         { id: 1, name: "HM NET Jetak", amount: 2900000, note: "Omset Tetap Jetak" },
-        { id: 2, name: "HM NET Gribig", amount: 0, syncWithBilling: true, note: "Sinkron billing realtime" }
+        { id: 2, name: "HM NET Gribig", amount: 0, syncWithBilling: true, note: "Sinkron Piutang Billing realtime" }
       ],
       personalExpense: [
         { id: 1, name: "Makan", amount: 0, syncWithFoodSheet: true, note: "Akumulasi kalender makan 26-25" },
@@ -1309,7 +1307,62 @@ class HMNetStore {
       businessExpense: [
         { id: 1, name: "Indihome Jetak", amount: 555000, note: "Upstream ISP Jetak" },
         { id: 2, name: "Si Cakra Gribig", amount: 2000000, note: "Upstream ISP Dedicated Gribig" }
-      ],
+      ]
+    };
+  }
+
+  getMonthlyTemplate() {
+    if (!this.personalFinance.monthlyTemplate) {
+      this.personalFinance.monthlyTemplate = this.getDefaultMonthlyTemplate();
+      this.savePersonalFinance();
+    }
+    return this.personalFinance.monthlyTemplate;
+  }
+
+  saveMonthlyTemplate(newTemplate) {
+    if (newTemplate && typeof newTemplate === 'object') {
+      this.personalFinance.monthlyTemplate = {
+        personalIncome: Array.isArray(newTemplate.personalIncome) ? newTemplate.personalIncome : [],
+        businessIncome: Array.isArray(newTemplate.businessIncome) ? newTemplate.businessIncome : [],
+        personalExpense: Array.isArray(newTemplate.personalExpense) ? newTemplate.personalExpense : [],
+        businessExpense: Array.isArray(newTemplate.businessExpense) ? newTemplate.businessExpense : []
+      };
+      this.savePersonalFinance();
+      return this.personalFinance.monthlyTemplate;
+    }
+    return null;
+  }
+
+  resetMonthlyTemplateToDefault() {
+    this.personalFinance.monthlyTemplate = this.getDefaultMonthlyTemplate();
+    this.savePersonalFinance();
+    return this.personalFinance.monthlyTemplate;
+  }
+
+  getRealisationTemplate(period = "November 2026") {
+    const { monthName } = this.parsePeriod(period);
+    const tmpl = this.getMonthlyTemplate();
+    const cloneSection = (items) => (items || []).map((it, idx) => {
+      let name = it.name;
+      if (name.includes("Agrapana") && !name.includes(monthName)) {
+        name = `${name} ${monthName}`;
+      }
+      return {
+        id: it.id || (idx + 1),
+        name: name,
+        amount: Number(it.amount) || 0,
+        note: it.note || "",
+        ...(it.syncWithBilling ? { syncWithBilling: true } : {}),
+        ...(it.syncWithFoodSheet ? { syncWithFoodSheet: true } : {})
+      };
+    });
+
+    return {
+      period: period,
+      personalIncome: cloneSection(tmpl.personalIncome),
+      businessIncome: cloneSection(tmpl.businessIncome),
+      personalExpense: cloneSection(tmpl.personalExpense),
+      businessExpense: cloneSection(tmpl.businessExpense),
       foodExpenses: this.generateDefaultFoodDates(period)
     };
   }
@@ -1346,17 +1399,22 @@ class HMNetStore {
 
     // 1. Sync food expenses total to personalExpense "Makan"
     const foodTotal = this.getFoodExpenseTotal(period);
-    const makanItem = real.personalExpense.find(e => e.name.toLowerCase() === "makan" || e.syncWithFoodSheet);
+    const makanItem = real.personalExpense.find(e => e.syncWithFoodSheet || (e.name && e.name.toLowerCase() === "makan"));
     if (makanItem) {
+      makanItem.syncWithFoodSheet = true;
       makanItem.amount = foodTotal;
     }
 
-    // 2. Sync billing revenue to businessIncome "HM NET Gribig" if syncWithBilling is true
-    const gribigItem = real.businessIncome.find(e => e.name.toLowerCase().includes("gribig") && e.syncWithBilling);
+    // 2. Sync billing revenue to businessIncome "HM NET Gribig" (or item with syncWithBilling)
+    const gribigItem = real.businessIncome.find(e => e.syncWithBilling || (e.name && e.name.toLowerCase().includes("gribig")));
     if (gribigItem) {
-      const fin = this.getFinancials(period);
-      if (fin && fin.totalPaid > 0) {
-        gribigItem.amount = fin.totalPaid;
+      if (gribigItem.syncWithBilling === undefined) gribigItem.syncWithBilling = true;
+      if (gribigItem.syncWithBilling) {
+        const fin = this.getFinancials(period);
+        if (fin) {
+          // REVISI USER: Nominal kotak merah adalah JUMLAH PIUTANG / NOMINAL PELANGGAN BELUM BAYAR (fin.totalUnpaid)
+          gribigItem.amount = fin.totalUnpaid;
+        }
       }
     }
 
@@ -1432,7 +1490,10 @@ class HMNetStore {
       const item = real[sectionKey].find(i => i.id === Number(id));
       if (item) {
         if (name !== undefined) item.name = String(name).trim();
-        if (amount !== undefined) item.amount = Number(amount) || 0;
+        // Hanya update amount manual jika bukan item otomatis (syncWithBilling / syncWithFoodSheet)
+        if (!item.syncWithBilling && !item.syncWithFoodSheet) {
+          if (amount !== undefined) item.amount = Number(amount) || 0;
+        }
         if (note !== null) item.note = note;
         this.savePersonalFinance();
         return item;
@@ -1451,12 +1512,12 @@ class HMNetStore {
 
   toggleBillingSync(period, enabled) {
     const real = this.getRealisation(period);
-    const gribig = real.businessIncome.find(e => e.name.toLowerCase().includes("gribig"));
+    const gribig = real.businessIncome.find(e => e.syncWithBilling || (e.name && e.name.toLowerCase().includes("gribig")));
     if (gribig) {
       gribig.syncWithBilling = enabled;
       if (enabled) {
         const fin = this.getFinancials(period);
-        gribig.amount = fin ? fin.totalPaid : 2550000;
+        gribig.amount = fin ? fin.totalUnpaid : 2050000;
       }
       this.savePersonalFinance();
     }
